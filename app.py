@@ -30,8 +30,10 @@ def load_model():
 
 try:
     bundle = load_model()
+
     model = bundle["model"]
     features = list(bundle["features"])
+
 except Exception as error:
     st.error(f"Could not load the air-quality model: {error}")
     st.stop()
@@ -114,18 +116,14 @@ uploaded_image = st.file_uploader(
 
 
 if uploaded_image is not None:
+
     try:
         image = Image.open(uploaded_image)
 
         st.image(
             image,
-            caption="Uploaded image",
+            caption="Uploaded environmental image",
             width="stretch"
-        )
-
-        st.info(
-            "The image is used as visual context. "
-            "It does not directly measure AQI."
         )
 
     except Exception as error:
@@ -137,6 +135,9 @@ if "prediction_result" not in st.session_state:
 
 if "confidence_result" not in st.session_state:
     st.session_state.confidence_result = None
+
+if "probability_table" not in st.session_state:
+    st.session_state.probability_table = None
 
 
 if st.button("Estimate pollution risk", type="primary"):
@@ -154,26 +155,56 @@ if st.button("Estimate pollution risk", type="primary"):
     }
 
     try:
-        values = pd.DataFrame(
+        input_data = pd.DataFrame(
             [[input_values.get(feature, 0) for feature in features]],
             columns=features
         )
 
-        raw_prediction = model.predict(values)[0]
-        probabilities = model.predict_proba(values)[0]
-        confidence = float(max(probabilities))
+        prediction = model.predict(input_data)[0]
 
-        st.session_state.prediction_result = raw_prediction
+        if hasattr(model, "predict_proba"):
+
+            probabilities = model.predict_proba(input_data)[0]
+            class_names = model.classes_
+
+            probability_table = pd.DataFrame({
+                "Risk Level": class_names,
+                "Probability": probabilities
+            })
+
+            probability_table["Probability"] = (
+                probability_table["Probability"] * 100
+            ).round(2)
+
+            probability_table["Probability"] = (
+                probability_table["Probability"].astype(str) + "%"
+            )
+
+            confidence = float(max(probabilities))
+
+        else:
+            probability_table = pd.DataFrame({
+                "Risk Level": [prediction],
+                "Probability": ["Unavailable"]
+            })
+
+            confidence = None
+
+        st.session_state.prediction_result = prediction
         st.session_state.confidence_result = confidence
+        st.session_state.probability_table = probability_table
 
     except Exception as error:
         st.session_state.prediction_result = None
         st.session_state.confidence_result = None
+        st.session_state.probability_table = None
+
         st.error(f"Prediction failed: {error}")
 
 
 prediction = st.session_state.prediction_result
 confidence = st.session_state.confidence_result
+probability_table = st.session_state.probability_table
 
 
 if prediction is not None:
@@ -182,26 +213,27 @@ if prediction is not None:
 
     if prediction_text == "high":
         st.error("🔴 High estimated pollution risk")
-        st.write(
-            "Consider reducing prolonged outdoor activity "
-            "and checking official local AQI information."
-        )
 
     elif prediction_text == "moderate":
         st.warning("🟡 Moderate estimated pollution risk")
-        st.write(
-            "Use caution during long outdoor activities "
-            "and monitor official updates."
-        )
+
+    elif prediction_text == "low":
+        st.success("🟢 Low estimated pollution risk")
 
     else:
-        st.success("🟢 Low estimated pollution risk")
-        st.write(
-            "Current numerical indicators suggest lower risk, "
-            "but continue monitoring conditions."
-        )
+        st.info(f"Estimated pollution risk: {prediction}")
 
-    st.write(f"Model confidence: {confidence:.1%}")
+    if confidence is not None:
+        st.write(f"Model confidence: {confidence:.2%}")
+
+    st.subheader("📊 Probability by risk level")
+
+    if probability_table is not None:
+        st.dataframe(
+            probability_table,
+            hide_index=True,
+            width="stretch"
+        )
 
     st.subheader("📍 Selected location")
 
@@ -215,9 +247,10 @@ if prediction is not None:
     )
 
     folium.Marker(
-        [latitude, longitude],
-        popup=f"Estimated pollution risk: {prediction}",
-        tooltip="Selected location"
+        location=[latitude, longitude],
+        popup=f"Pollution risk: {prediction}",
+        tooltip="Selected location",
+        icon=folium.Icon(color="red", icon="cloud")
     ).add_to(map_object)
 
     folium_static(
