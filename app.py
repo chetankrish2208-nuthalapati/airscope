@@ -202,7 +202,11 @@ if prediction is not None:
 
     st.write(f"Model confidence: {confidence:.1%}")
 
-    st.subheader("Location")
+    st.subheader("📍 Selected location")
+
+    st.write(
+        f"Latitude: {latitude:.4f} | Longitude: {longitude:.4f}"
+    )
 
     map_object = folium.Map(
         location=[latitude, longitude],
@@ -211,14 +215,15 @@ if prediction is not None:
 
     folium.Marker(
         [latitude, longitude],
-        popup=f"Estimated risk: {prediction}",
+        popup=f"Estimated pollution risk: {prediction}",
         tooltip="Selected location"
     ).add_to(map_object)
 
     st_folium(
         map_object,
         width=700,
-        height=450
+        height=500,
+        returned_objects=[]
     )
 
 
