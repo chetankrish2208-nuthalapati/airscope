@@ -4,7 +4,7 @@ import streamlit as st
 import folium
 
 from PIL import Image
-from streamlit_folium import st_folium
+from streamlit_folium import folium_static
 
 
 st.set_page_config(
@@ -112,6 +112,7 @@ uploaded_image = st.file_uploader(
     type=["jpg", "jpeg", "png"]
 )
 
+
 if uploaded_image is not None:
     try:
         image = Image.open(uploaded_image)
@@ -162,13 +163,7 @@ if st.button("Estimate pollution risk", type="primary"):
         probabilities = model.predict_proba(values)[0]
         confidence = float(max(probabilities))
 
-        st.write("Raw model prediction:", raw_prediction)
-        st.write("Model classes:", model.classes_)
-        st.write("Class probabilities:", probabilities)
-
-        prediction = raw_prediction
-
-        st.session_state.prediction_result = prediction
+        st.session_state.prediction_result = raw_prediction
         st.session_state.confidence_result = confidence
 
     except Exception as error:
@@ -225,11 +220,10 @@ if prediction is not None:
         tooltip="Selected location"
     ).add_to(map_object)
 
-    st_folium(
+    folium_static(
         map_object,
         width=700,
-        height=500,
-        returned_objects=[]
+        height=500
     )
 
 
