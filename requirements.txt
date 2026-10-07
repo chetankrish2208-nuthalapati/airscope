@@ -1,0 +1,10 @@
+#Requierments 
+
+pandas
+numpy
+scikit-learn
+streamlit
+folium
+streamlit-folium
+joblib
+pillow
