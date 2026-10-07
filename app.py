@@ -158,9 +158,15 @@ if st.button("Estimate pollution risk", type="primary"):
             columns=features
         )
 
-        prediction = model.predict(values)[0]
+        raw_prediction = model.predict(values)[0]
         probabilities = model.predict_proba(values)[0]
         confidence = float(max(probabilities))
+
+        st.write("Raw model prediction:", raw_prediction)
+        st.write("Model classes:", model.classes_)
+        st.write("Class probabilities:", probabilities)
+
+        prediction = raw_prediction
 
         st.session_state.prediction_result = prediction
         st.session_state.confidence_result = confidence
