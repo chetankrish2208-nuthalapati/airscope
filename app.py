@@ -30,7 +30,6 @@ def load_model():
 
 try:
     bundle = load_model()
-
     model = bundle["model"]
     features = list(bundle["features"])
 
@@ -130,14 +129,8 @@ if uploaded_image is not None:
         st.error(f"Could not open the image: {error}")
 
 
-if "prediction_result" not in st.session_state:
-    st.session_state.prediction_result = None
-
-if "confidence_result" not in st.session_state:
-    st.session_state.confidence_result = None
-
-if "probability_table" not in st.session_state:
-    st.session_state.probability_table = None
+if "has_estimated" not in st.session_state:
+    st.session_state.has_estimated = False
 
 
 if st.button("Estimate pollution risk", type="primary"):
@@ -174,15 +167,12 @@ if st.button("Estimate pollution risk", type="primary"):
 
             probability_table["Probability"] = (
                 probability_table["Probability"] * 100
-            ).round(2)
-
-            probability_table["Probability"] = (
-                probability_table["Probability"].astype(str) + "%"
-            )
+            ).round(2).astype(str) + "%"
 
             confidence = float(max(probabilities))
 
         else:
+
             probability_table = pd.DataFrame({
                 "Risk Level": [prediction],
                 "Probability": ["Unavailable"]
@@ -193,21 +183,22 @@ if st.button("Estimate pollution risk", type="primary"):
         st.session_state.prediction_result = prediction
         st.session_state.confidence_result = confidence
         st.session_state.probability_table = probability_table
+        st.session_state.has_estimated = True
 
     except Exception as error:
         st.session_state.prediction_result = None
         st.session_state.confidence_result = None
         st.session_state.probability_table = None
+        st.session_state.has_estimated = False
 
         st.error(f"Prediction failed: {error}")
 
 
-prediction = st.session_state.prediction_result
-confidence = st.session_state.confidence_result
-probability_table = st.session_state.probability_table
+if st.session_state.has_estimated:
 
-
-if prediction is not None:
+    prediction = st.session_state.prediction_result
+    confidence = st.session_state.confidence_result
+    probability_table = st.session_state.probability_table
 
     prediction_text = str(prediction).strip().lower()
 
@@ -228,12 +219,11 @@ if prediction is not None:
 
     st.subheader("📊 Probability by risk level")
 
-    if probability_table is not None:
-        st.dataframe(
-            probability_table,
-            hide_index=True,
-            width="stretch"
-        )
+    st.dataframe(
+        probability_table,
+        hide_index=True,
+        width="stretch"
+    )
 
     st.subheader("📍 Selected location")
 
